@@ -71,6 +71,8 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
         let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(pinch))
         let longPressGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(longPress))
         longPressGestureRecognizer.minimumPressDuration = 0.1
+        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(panned))
+        self.sceneView.addGestureRecognizer(panGestureRecognizer)
         self.sceneView.addGestureRecognizer(tapGestureRecognizer)
         self.sceneView.addGestureRecognizer(pinchGestureRecognizer)
         self.sceneView.addGestureRecognizer(longPressGestureRecognizer)
@@ -136,6 +138,47 @@ class ViewController: UIViewController, UICollectionViewDataSource, UICollection
                 results?.node.removeAllActions()
                 print("Released")
             }
+        }
+    }
+    
+        var parnatNode: SCNNode? = nil {
+        didSet{
+            print("Node was assinged")
+        }
+    }
+    
+    @objc func panned(recognizer: UIPanGestureRecognizer) {
+        recognizer.maximumNumberOfTouches = 1
+        let location = recognizer.location(in: sceneView)
+        let arHitResult = sceneView.hitTest(location, types: .existingPlane)
+        if recognizer.state == .began {
+            virtualObject(at: location)
+        }
+        if recognizer.state == .changed {
+            if !arHitResult.isEmpty {
+                guard let hit = arHitResult.first else {return}
+                let transform = hit.worldTransform.columns.3
+                SCNTransaction.begin()
+                //                parnatNode?.worldPosition = SCNVector3(transform.x,transform.y,transform.z)
+                parnatNode?.worldPosition = SCNVector3(transform.x,transform.y,transform.z)
+                //                parnatNode?.simdPosition = SCNVector3(transform.columns.3.x, transform.columns.3.y, transform.columns.3.z)
+                SCNTransaction.commit()
+            }
+        }
+        if recognizer.state == .ended {
+            print("node is set to nil")
+            parnatNode = nil
+        }
+    }
+    
+    /// Hit tests against the `sceneView` to find an object at the provided point.
+    func virtualObject(at point: CGPoint) {
+        let hitTestOptions: [SCNHitTestOption: Any] = [.boundingBoxOnly: true]
+        let hitTestResults = sceneView.hitTest(point, options: hitTestOptions)
+        if !hitTestResults.isEmpty {
+            let hitNode = hitTestResults.first!
+            parnatNode = hitNode.node
+            print("virtualObject was found")
         }
     }
     
